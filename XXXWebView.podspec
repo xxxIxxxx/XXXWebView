@@ -6,7 +6,7 @@ Pod::Spec.new do |s|
   s.license = "MIT"
   s.authors = { "i2yf" => "i2yf@foxmail.com" }
   s.platform = :ios
-  s.platform = :ios, "8.0"
+  s.platform = :ios, "11.0"
   s.source = { :git => "https://github.com/xxxIxxxx/XXXWebView.git", :tag => s.version }
   s.source_files = "XXXWebView/*.{h,m}"
   s.requires_arc = true
