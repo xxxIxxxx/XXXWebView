@@ -8,7 +8,7 @@ Pod::Spec.new do |s|
   s.platform = :ios
   s.platform = :ios, "11.0"
   s.source = { :git => "https://github.com/xxxIxxxx/XXXWebView.git", :tag => s.version }
-  s.source_files = "XXXWebView/*.{h,m}"
+  s.source_files = "XXXWebViewDemo/XXXWebView/*.{h,m}"
   s.requires_arc = true
   s.dependency "SDWebImage"
 end
