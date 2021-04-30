@@ -11,7 +11,7 @@
 #import <Masonry/Masonry.h>
 
 @interface ViewController ()<WKNavigationDelegate>
-
+@property (nonatomic, strong) XXXWebView *xWebView;
 @end
 
 @implementation ViewController
@@ -20,7 +20,8 @@
     [super viewDidLoad];
     // Do any additional setup after loading the view.
     self.view.backgroundColor = UIColor.whiteColor;
-    
+  
+
     
     UIButton *pbtn = [UIButton buttonWithType:UIButtonTypeCustom];
     [self.view addSubview:pbtn];
@@ -72,20 +73,16 @@
     
     
     XXXWebView *xWebView = XXXWebView.new;
+    self.xWebView = xWebView;
     [headerView addSubview:xWebView];
     [xWebView mas_makeConstraints:^(MASConstraintMaker *make){
         make.edges.mas_equalTo(UIEdgeInsetsMake(0, 0, 10, 0));
     }];
-    
-    xWebView.oriImageUrl = @"https://wx2.sinaimg.cn/";
-    xWebView.oriImageScheme = @"https";
     xWebView.placeholderImage = [UIImage imageNamed:@"abc"];
-    
-    
     xWebView.webView.navigationDelegate = self;
     xWebView.webView.scrollView.scrollEnabled = NO;
+    xWebView.isAsyncLoadImg = YES;
     xWebView.htmlString = [self htmlString];
-    [xWebView addImgClickScript];
     [xWebView startLoadHTMLString];
     
     __weak typeof(headerView) weakHeaderView = headerView;
@@ -95,7 +92,6 @@
         weakHeaderView.height = height +10;
         weakTabView.tableHeaderView = weakHeaderView;
     };
-    
 }
 
 
@@ -105,39 +101,18 @@
 
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
     
-    /// 是否是点击图片
-    BOOL isCustom = [XXXWebView isCustomScheme:navigationAction];
-    if (isCustom) {
-        
-        //-----
-        /// 图片是否被 a 标签包裹
-        BOOL isA = [XXXWebView isA:navigationAction];
-        if (isA) {
-            // 是，不拦截
-            decisionHandler(WKNavigationActionPolicyAllow);
-            return;
-        }else{
-            // 不是，拦截
-            decisionHandler(WKNavigationActionPolicyCancel);
-            
-            [XXXWebView customScheme:navigationAction oriImageScheme:@"https" imgClick:^(BOOL isA, NSString * _Nonnull aUrl, NSString * _Nonnull imgUrl, UIImage * _Nonnull image) {
-                
-//                imgUrl 图片链接，image 图片 图片加载完成是 image 否则是 imgUrl）
-                NSLog(@"\n ---- 点击图片 ---- \n 是否是 a 标签 = %@ \n a 标签链接 = %@ \n 图片链接 = %@ \n 图片 = %@",isA?@"是":@"否",aUrl,imgUrl,image);
-            }];
-        }
-        //-----
-        
-        /*
-         // 只要是 图片点击事件 都拦截
-         decisionHandler(WKNavigationActionPolicyCancel);
-         [XXXWebView customScheme:navigationAction oriImageScheme:@"https" imgClick:^(BOOL isA, NSString * _Nonnull aUrl, NSString * _Nonnull imgUrl, UIImage * _Nonnull image) {
-         //imgUrl 图片链接，image 图片 图片加载完成是 image 否则是 imgUrl）
-         NSLog(@"\n ---- 点击图片 ---- \n 是否是 a 标签 = %@ \n a 标签链接 = %@ \n 图片链接 = %@ \n 图片 = %@",isA?@"是":@"否",aUrl,imgUrl,image);
-         */
+  
+    if ([self.xWebView isCustomScheme:navigationAction]) {
+        [self.xWebView customScheme:navigationAction imgClick:^(NSString * _Nonnull imgUrl, UIImage * _Nullable image) {
+          NSLog(@"\n-- 图片地址:%@\n--   图片:%@",imgUrl,image);
+          
+        }];
+        decisionHandler(WKNavigationActionPolicyCancel);
         return;
     }
+  
     decisionHandler(WKNavigationActionPolicyAllow);
+  
 }
 
 
@@ -171,8 +146,7 @@
     一、《望天门山》 作者：唐代李白 1、原文 天门中断楚江开，碧水东流至此回。两岸青山相对出，孤帆一bai片日边来。 2、译文\
 天门山从中间断裂是楚江把它冲开，碧水向东浩然奔流到这里折回。\
     两岸高耸的青山隔着长江相峙而立，江面上一叶孤舟像从日边驶来。\
-    <img src=\"https://wx2.sinaimg.cn/large/006CHHsBly1gkxrs7785ej31402eoe84.jpg\"/>\
-    二、《望庐山瀑布》 作者：唐代李白 1、原文 日照香炉生紫烟，遥看瀑布挂前川。\
+  <a href=\"https://www.baidu.com\"><img src=\"https://wx2.sinaimg.cn/large/006CHHsBly1gkxrs7785ej31402eoe84.jpg\" /></a>二、《望庐山瀑布》 作者：唐代李白 1、原文 日照香炉生紫烟，遥看瀑布挂前川。\
     飞流直下三千尺，疑是银河落九天。 2、译文\
     太阳照耀香炉峰生出袅袅紫烟，远远望去瀑布像长河悬挂山前。\
     仿佛三千尺水流飞奔直冲而下，莫非是银河从九天垂落山崖间。\
@@ -203,7 +177,7 @@
 
 - (void)dealloc
 {
-    NSLog(@"--- dealloc ---");
+    NSLog(@"---- %@  dealloc ----",self.class);
 }
 
 @end

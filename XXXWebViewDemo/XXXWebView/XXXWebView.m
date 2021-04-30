@@ -7,41 +7,122 @@
 //
 
 #import "XXXWebView.h"
+// https://github.com/topfunky/hpple/tree/master
+#import "TFHpple.h"
 #import <SDWebImage/SDWebImage.h>
+
+#pragma mark -
+#pragma mark - XXXCustomSchemeHanlder
+
+
+@interface XXXCustomSchemeHanlder : NSObject <WKURLSchemeHandler>
+
+@property (nonatomic, copy) NSDictionary<NSString *,NSString *> *imgUrlDict;
+@property (nonatomic, strong) UIImage *placeholderImage;
+@property (nonatomic, copy) void(^updateImageBlock)(void);
+
+@end
+
+
+@implementation XXXCustomSchemeHanlder
+
+- (void)webView:(nonnull WKWebView *)webView startURLSchemeTask:(nonnull id<WKURLSchemeTask>)urlSchemeTask {
+    
+    UIImage *image = self.placeholderImage;
+    NSData *data = UIImageJPEGRepresentation(image, 1.0);
+    NSURLResponse *response = [[NSURLResponse alloc] initWithURL:urlSchemeTask.request.URL MIMEType:@"image/jpeg" expectedContentLength:data.length textEncodingName:nil];
+    [urlSchemeTask didReceiveResponse:response];
+    [urlSchemeTask didReceiveData:data];
+    [urlSchemeTask didFinish];
+    
+    if (self.updateImageBlock) {
+        self.updateImageBlock();
+    }
+    
+    NSString *customSchemeUrl = [NSString stringWithFormat:@"%@",urlSchemeTask.request.URL];
+    NSString *oriSchemeUrl = self.imgUrlDict[customSchemeUrl];
+    
+  
+  
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+
+        [self readImageForKey:oriSchemeUrl customSchemeUrl:customSchemeUrl webView:webView];
+    });
+}
+
+
+
+- (void)readImageForKey:(NSString *)oriSchemeUrl customSchemeUrl:(NSString *)customSchemeUrl webView:(WKWebView *)webView {
+    
+    __weak typeof(self) weakSelf = self;
+    NSURL *url = [NSURL URLWithString:oriSchemeUrl];
+    [[SDWebImageManager sharedManager] loadImageWithURL:url options:SDWebImageRetryFailed progress:nil completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, SDImageCacheType cacheType, BOOL finished, NSURL * _Nullable imageURL) {
+        
+        if (image || data) {
+            NSData *imgData = data;
+            
+            if (!imgData) imgData = UIImageJPEGRepresentation(image, 1);
+            
+            [weakSelf callJsUpdateImage:webView imageData:imgData htmlImageUrlStr:customSchemeUrl];
+        }
+        if (error) {}
+    }];
+}
+
+
+
+
+- (void)callJsUpdateImage:(WKWebView *)webView imageData:(NSData *)imageData htmlImageUrlStr:(NSString *)imageUrlString {
+    
+    __weak typeof(self) weakSelf = self;
+    NSString *imageDataStr = [NSString stringWithFormat:@"data:image/png;base64,%@",[imageData xxx_base64EncodedString]];
+    NSString *func = [NSString stringWithFormat:@"xxxUpdateImage('%@','%@')",imageUrlString,imageDataStr];
+
+    [webView evaluateJavaScript:func completionHandler:^(id _Nullable response, NSError * _Nullable error) {
+        if (weakSelf.updateImageBlock) {
+            weakSelf.updateImageBlock();
+        }
+    }];
+}
+
+- (void)webView:(nonnull WKWebView *)webView stopURLSchemeTask:(nonnull id<WKURLSchemeTask>)urlSchemeTask {
+    
+}
+
+@end
+
+
+#pragma mark -
+#pragma mark - XXXWebView
+
 @interface XXXWebView ()
 
-
-
-@property (nonatomic, copy) NSString *xxxCustomImageUrl;
-
 @property (nonatomic, copy) NSString *xxxHtmlString;
-
+@property (nonatomic, strong) NSMutableDictionary<NSString *,NSString *> *imageUrlDict;
+@property (nonatomic, strong) XXXCustomSchemeHanlder *schemeHandler;
 @end
 
 @implementation XXXWebView
 
 
-//第二次获取高度延迟时间 不建议太小 否则可能获取高度不对
-#define DelayTime 0.4
-
-#define XXXCustomImageScheme @"xxxixxxx"
-
-- (NSString *)xxxCustomImageUrl {
-    return  [self.oriImageUrl stringByReplacingOccurrencesOfString:self.oriImageScheme withString:XXXCustomImageScheme];
+- (instancetype)initWithFrame:(CGRect)frame
+{
+  self = [super initWithFrame:frame];
+  if (self) {
+    self.imageUrlDict = @{}.mutableCopy;
+    self.delayTime = 0.4;
+  }
+  return self;
 }
 
-#pragma mark -
+
 @synthesize webView = _webView;
 - (WKWebView *)webView {
     if (!_webView) {
-        
+
         WKWebViewConfiguration *config = [[WKWebViewConfiguration alloc] init];
         XXXCustomSchemeHanlder *schemeHandler = XXXCustomSchemeHanlder.new;
-        
-        schemeHandler.oriImageScheme = self.oriImageScheme;
-        schemeHandler.oriImageUrl = self.oriImageUrl;
-        schemeHandler.placeholderImage = self.placeholderImage;
-        
+        self.schemeHandler = schemeHandler;
         __weak typeof(self) weakSelf = self;
         schemeHandler.updateImageBlock = ^ {
             [weakSelf updateHeight];
@@ -50,7 +131,7 @@
         WKWebView  *webView = [[WKWebView alloc]initWithFrame:CGRectMake(0, 0, self.width, self.height) configuration:config];
         _webView = webView;
         [self addSubview:webView];
-        
+
     }
     return _webView;
 }
@@ -64,9 +145,12 @@
 - (void)setHtmlString:(NSString *)htmlString {
     _htmlString = htmlString;
     self.xxxHtmlString = htmlString;
-    [self changeImageScheme];
+    if (self.isAsyncLoadImg) {
+        [self changeImageScheme];
+    }
     [self addHtmlLab];
     [self addGetAllImgScript];
+    [self addImgClickScript];
     [self addUpdateImgScript];
 }
 
@@ -75,14 +159,24 @@
     if (!self.xxxHtmlString) {
         return;
     }
-    
+    self.schemeHandler.imgUrlDict = self.imageUrlDict;
+    self.schemeHandler.placeholderImage = self.placeholderImage;
     [self.webView loadHTMLString:self.xxxHtmlString baseURL:nil];
 }
 
 
 - (void)changeImageScheme {
-
-    self.xxxHtmlString = [self.xxxHtmlString stringByReplacingOccurrencesOfString:self.oriImageUrl withString:self.xxxCustomImageUrl];
+  
+    NSData  *data = [self.xxxHtmlString dataUsingEncoding:NSUTF8StringEncoding];
+    TFHpple *doc = [[TFHpple alloc] initWithHTMLData:data];
+    NSArray *list = [doc searchWithXPathQuery:@"//img"];
+    for (TFHppleElement * element in list) {
+        NSString *oriImageUrl = element.attributes[@"src"];
+        NSString *oriImageUrlScheme = [NSURL URLWithString:oriImageUrl].scheme;
+        NSString *newImageUrl = [oriImageUrl stringByReplacingOccurrencesOfString:oriImageUrlScheme withString:XXXCustomImageScheme];
+        self.xxxHtmlString = [self.xxxHtmlString stringByReplacingOccurrencesOfString:oriImageUrl withString:newImageUrl];
+        self.imageUrlDict[newImageUrl] = oriImageUrl;
+    }
 }
 
 - (void)addHtmlLab {
@@ -97,10 +191,7 @@
 
     NSString *scriptLab1 = @"</script>";
     
-    NSString *jsFunctionString = @"function xxxGetAllImg() {\
-    var es = document.getElementsByTagName(\"img\");\
-    return Array.from(es);}var allimgList = xxxGetAllImg();";
-    
+    NSString *jsFunctionString = @"var allImgElmentList = new Array();var allImgSrcUrlList = new Array();!(function xxxGetAllImg() {var es = document.getElementsByTagName(\"img\");allImgElmentList = Array.from(es);for (let item of allImgElmentList) {allImgSrcUrlList.push(item.src)}})();";
     
     if ([self.xxxHtmlString containsString:scriptLab1]) {
      
@@ -123,13 +214,8 @@
     
     NSString *scriptLab1 = @"</script>";
     
-    NSString *jsFunctionString = @"function xxxUpdateImage(url, imgData) {\
-    var list = allimgList;\
-    for (let item of list) {\
-      if (item.src == url) {\
-        item.src = imgData;break;}}} ";
+    NSString *jsFunctionString = @"function xxxUpdateImage(url, imgData) {for (let item of allImgElmentList) {if (item.src == url) {item.src = imgData;break;}}};";
     
-  
     if ([self.xxxHtmlString containsString:scriptLab1]) {
      
         NSString *scriptString = [NSString stringWithFormat:@"%@%@",jsFunctionString,scriptLab1];
@@ -147,7 +233,7 @@
 - (void)addImgClickScript {
     
     NSString *scriptLab1 = @"</script>";
-    NSString *jsFunctionString = [NSString stringWithFormat:@"function xxxIsATag(element) {if (element.constructor == HTMLAnchorElement) {var a = new Object();a.isA = true;a.url = element;return a;} else if (element.parentElement != null) {return xxxIsATag(element.parentElement);} else {var a = new Object();a.isA = false;a.url = '';return a;}}!function xxxAddClick() {var list = allimgList;list.forEach(element => {console.log(element);element.onclick = function () {var imgSrc = element.src;var a = xxxIsATag(element);window.location.href = `%@://?isA=${a.isA}&aUrl=${a.url}&imgSrc=${imgSrc}`;}});}();",XXXCustomImageScheme];
+    NSString *jsFunctionString = [NSString stringWithFormat:@"function xxxIsATag(element) {if (element.constructor == HTMLAnchorElement) { var a = new Object(); a.isA = true; a.url = element; return a; } else if (element.parentElement != null) { return xxxIsATag(element.parentElement); } else { var a = new Object(); a.isA = false;a.url = \"\"; return a;}}; !(function xxxAddClick() { var list = allImgElmentList; list.forEach((element, index) => { element.onclick = function () { var imgSrc = element.src; var a = xxxIsATag(element); window.location.href = `%@://?isA=${a.isA}&aUrl=${a.url}&imgSrc=${imgSrc}&imgUrl=${allImgSrcUrlList[index]}`;};});})();",XXXCustomImageScheme];
   
     if ([self.xxxHtmlString containsString:scriptLab1]) {
      
@@ -182,13 +268,14 @@
 
 - (void)delayUpdateHeight {
     
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, DelayTime * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        [self nowUpdateHeight];
+    __weak typeof(self) weakSelf = self;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, self.delayTime * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        [weakSelf nowUpdateHeight];
     });
 }
 
 
-+(BOOL)isCustomScheme:(WKNavigationAction *)navigationAction {
+- (BOOL)isCustomScheme:(WKNavigationAction *)navigationAction {
     NSURL *url = navigationAction.request.URL;
     NSString *scheme = [url scheme];
     if ([scheme isEqualToString:XXXCustomImageScheme]) {
@@ -197,136 +284,39 @@
     return NO;
 }
 
-+(BOOL)isA:(WKNavigationAction *)navigationAction {
-    NSURL *url = navigationAction.request.URL;
-    NSString *scheme = [url scheme];
-    if ([scheme isEqualToString:XXXCustomImageScheme]) {
-        NSURLComponents *urlComponents = [[NSURLComponents alloc] initWithURL:url resolvingAgainstBaseURL:NO];
-        for (NSURLQueryItem *item in urlComponents.queryItems) {
-            if ([item.name isEqualToString:@"isA"]) {
-                return ![item.value isEqualToString:@"false"];
-            }
-        }
-    }
-    return NO;
-}
-
-
-
-+(void)customScheme:(WKNavigationAction *)navigationAction oriImageScheme:(NSString *)oriImageScheme imgClick:(void(^)(BOOL isA,NSString *aUrl,NSString *imgUrl,UIImage *image))imgClickBlock {
-    
+- (void)customScheme:(WKNavigationAction *)navigationAction imgClick:( void(^)(NSString *imgUrl,  UIImage * _Nullable image))imgClickBlock; {
+  
     if (!imgClickBlock) {
-        return;
+        return ;
     }
-    
-    NSURL *url = navigationAction.request.URL;
-    NSString *scheme = [url scheme];
-    if ([scheme isEqualToString:XXXCustomImageScheme]) {
+  
+    BOOL isClickImage = [self isCustomScheme:navigationAction];
+  
+    if (isClickImage) {
+        NSURL *url = navigationAction.request.URL;
         NSURLComponents *urlComponents = [[NSURLComponents alloc] initWithURL:url resolvingAgainstBaseURL:NO];
-        BOOL isA = NO;
-        NSString *aUrl;
         NSString *imgUrl;
         UIImage *image;
-        for (NSURLQueryItem *item in urlComponents.queryItems) {
-            if ([item.name isEqualToString:@"isA"]) {
-                isA = ![item.value isEqualToString:@"false"];
-            }
-            if ([item.name isEqualToString:@"aUrl"]) {
-                aUrl = item.value;
-            }
-            if ([item.name isEqualToString:@"imgSrc"]) {
+      for (NSURLQueryItem *item in urlComponents.queryItems) {
+          if ([item.name isEqualToString:@"imgSrc"]) {
+              if (self.isAsyncLoadImg && ![item.value containsString:XXXCustomImageScheme]) {
+                  NSString *base64String = [item.value stringByReplacingOccurrencesOfString:@"data:image/png;base64," withString:@""];
+                  NSData *imgData = [[NSData alloc] initWithBase64EncodedString:base64String options:NSDataBase64DecodingIgnoreUnknownCharacters];
+                  image = [UIImage imageWithData:imgData];
+              }
+            }else if ([item.name isEqualToString:@"imgUrl"]){
                 if ([item.value containsString:XXXCustomImageScheme]) {
-                    imgUrl = [item.value stringByReplacingOccurrencesOfString:XXXCustomImageScheme withString:oriImageScheme];
-                    
+                    imgUrl = self.imageUrlDict[item.value];
                 }else{
-                    NSString *base64String = [item.value stringByReplacingOccurrencesOfString:@"data:image/png;base64," withString:@""];
-                    NSData *imgData = [[NSData alloc] initWithBase64EncodedString:base64String options:NSDataBase64DecodingIgnoreUnknownCharacters];
-                    image = [UIImage imageWithData:imgData];
+                    imgUrl = item.value;
                 }
             }
         }
-        imgClickBlock(isA,aUrl,imgUrl,image);
+        imgClickBlock(imgUrl,image);
     }
 }
 
-
-
 @end
-
-#pragma mark -
-#pragma mark - XXXCustomSchemeHanlder
-
-@implementation XXXCustomSchemeHanlder
-
-
-- (void)webView:(nonnull WKWebView *)webView startURLSchemeTask:(nonnull id<WKURLSchemeTask>)urlSchemeTask {
-    
-    UIImage *image = self.placeholderImage;
-    NSData *data = UIImageJPEGRepresentation(image, 1.0);
-    NSURLResponse *response = [[NSURLResponse alloc] initWithURL:urlSchemeTask.request.URL MIMEType:@"image/jpeg" expectedContentLength:data.length textEncodingName:nil];
-    [urlSchemeTask didReceiveResponse:response];
-    [urlSchemeTask didReceiveData:data];
-    [urlSchemeTask didFinish];
-    
-    if (self.updateImageBlock) {
-        self.updateImageBlock();
-    }
-    
-    NSString *htmlImageUrlStr = [NSString stringWithFormat:@"%@",urlSchemeTask.request.URL];
-    NSString *dloadImageUrlStr = [htmlImageUrlStr stringByReplacingOccurrencesOfString:XXXCustomImageScheme withString:self.oriImageScheme];
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-
-        [self readImageForKey:dloadImageUrlStr htmlImageUrlStr:htmlImageUrlStr webView:webView];
-    });
-}
-
-
-
-- (void)readImageForKey:(NSString *)dloadImageUrlStr htmlImageUrlStr:(NSString *)htmlImageUrlStr webView:(WKWebView *)webView {
-    
-    __weak typeof(self) weakSelf = self;
-    NSURL *url = [NSURL URLWithString:dloadImageUrlStr];
-    [[SDWebImageManager sharedManager] loadImageWithURL:url options:SDWebImageRetryFailed progress:nil completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, SDImageCacheType cacheType, BOOL finished, NSURL * _Nullable imageURL) {
-        
-        if (image || data) {
-            NSData *imgData = data;
-            
-            if (!imgData) imgData = UIImageJPEGRepresentation(image, 1);
-            
-            [weakSelf callJsUpdateImage:webView imageData:imgData htmlImageUrlStr:htmlImageUrlStr];
-        }
-        if (error) {}
-    }];
-}
-
-
-
-
-- (void)callJsUpdateImage:(WKWebView *)webView imageData:(NSData *)imageData htmlImageUrlStr:(NSString *)imageUrlString {
-    
-    __weak typeof(self) weakSelf = self;
-    NSString *imageDataStr = [NSString stringWithFormat:@"data:image/png;base64,%@",[imageData base64EncodedString]];
-    NSString *func = [NSString stringWithFormat:@"xxxUpdateImage('%@','%@')",imageUrlString,imageDataStr];
-    [webView evaluateJavaScript:func completionHandler:^(id _Nullable response, NSError * _Nullable error) {
-        if (weakSelf.updateImageBlock && !error) {
-            weakSelf.updateImageBlock();
-        }
-    }];
-}
-
-- (void)webView:(nonnull WKWebView *)webView stopURLSchemeTask:(nonnull id<WKURLSchemeTask>)urlSchemeTask {
-    
-}
-
-@end
-
-
-
-
-
-
-
 
 
 
@@ -412,7 +402,7 @@
 
 @implementation NSData (xxx)
 
-- (NSString *)base64EncodedString {
+- (NSString *)xxx_base64EncodedString {
     NSUInteger length = self.length;
     if (length == 0)
         return @"";

@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = "XXXWebView"
-  s.version = "1.0.0"
+  s.version = "1.1.0"
   s.summary = "异步加载 html 标签内的图片"
   s.homepage = "https://github.com/xxxIxxxx/XXXWebView"
   s.license = "MIT"

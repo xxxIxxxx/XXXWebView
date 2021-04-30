@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		19616B89263BB76300B2C221 /* TFHpple.m in Sources */ = {isa = PBXBuildFile; fileRef = 19616B84263BB76300B2C221 /* TFHpple.m */; };
+		19616B8A263BB76300B2C221 /* TFHppleElement.m in Sources */ = {isa = PBXBuildFile; fileRef = 19616B87263BB76300B2C221 /* TFHppleElement.m */; };
+		19616B8B263BB76300B2C221 /* XPathQuery.m in Sources */ = {isa = PBXBuildFile; fileRef = 19616B88263BB76300B2C221 /* XPathQuery.m */; };
 		199C6DB8256A47BA003EA828 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 199C6DB7256A47BA003EA828 /* AppDelegate.m */; };
 		199C6DBB256A47BA003EA828 /* SceneDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 199C6DBA256A47BA003EA828 /* SceneDelegate.m */; };
 		199C6DBE256A47BA003EA828 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 199C6DBD256A47BA003EA828 /* ViewController.m */; };
@@ -38,6 +41,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		19616B83263BB76300B2C221 /* TFHppleElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TFHppleElement.h; sourceTree = "<group>"; };
+		19616B84263BB76300B2C221 /* TFHpple.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TFHpple.m; sourceTree = "<group>"; };
+		19616B85263BB76300B2C221 /* XPathQuery.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = XPathQuery.h; sourceTree = "<group>"; };
+		19616B86263BB76300B2C221 /* TFHpple.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TFHpple.h; sourceTree = "<group>"; };
+		19616B87263BB76300B2C221 /* TFHppleElement.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TFHppleElement.m; sourceTree = "<group>"; };
+		19616B88263BB76300B2C221 /* XPathQuery.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = XPathQuery.m; sourceTree = "<group>"; };
 		199C6DB3256A47BA003EA828 /* XXXWebViewDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = XXXWebViewDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		199C6DB6256A47BA003EA828 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		199C6DB7256A47BA003EA828 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
@@ -91,6 +100,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		19616B82263BB76300B2C221 /* TFHpple */ = {
+			isa = PBXGroup;
+			children = (
+				19616B86263BB76300B2C221 /* TFHpple.h */,
+				19616B84263BB76300B2C221 /* TFHpple.m */,
+				19616B83263BB76300B2C221 /* TFHppleElement.h */,
+				19616B87263BB76300B2C221 /* TFHppleElement.m */,
+				19616B85263BB76300B2C221 /* XPathQuery.h */,
+				19616B88263BB76300B2C221 /* XPathQuery.m */,
+			);
+			path = TFHpple;
+			sourceTree = "<group>";
+		};
 		199C6DAA256A47BA003EA828 = {
 			isa = PBXGroup;
 			children = (
@@ -153,6 +175,7 @@
 		19ABD5DD257F51E8001C5DCC /* XXXWebView */ = {
 			isa = PBXGroup;
 			children = (
+				19616B82263BB76300B2C221 /* TFHpple */,
 				199C6DEF256A47D0003EA828 /* XXXWebView.h */,
 				199C6DEE256A47D0003EA828 /* XXXWebView.m */,
 			);
@@ -334,6 +357,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				199C6DF0256A47D0003EA828 /* XXXWebView.m in Sources */,
+				19616B8A263BB76300B2C221 /* TFHppleElement.m in Sources */,
+				19616B8B263BB76300B2C221 /* XPathQuery.m in Sources */,
+				19616B89263BB76300B2C221 /* TFHpple.m in Sources */,
 				199C6DBE256A47BA003EA828 /* ViewController.m in Sources */,
 				199C6DB8256A47BA003EA828 /* AppDelegate.m in Sources */,
 				199C6DC9256A47BC003EA828 /* main.m in Sources */,

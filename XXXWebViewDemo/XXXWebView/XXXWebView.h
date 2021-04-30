@@ -12,31 +12,27 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface XXXWebView : UIView
 
-
-// https://wx2.sinaimg.cn/large/006CHHsBly1gkxrs94aokj31402eob2b.jpg
-
-///图片域名     例如-> @"https://wx2.sinaimg.cn/"  参照上面图片地址
-@property (nonatomic, copy) NSString *oriImageUrl;
-
-///图片链接 Scheme   例如->   @"https" 参照上面图片地址
-@property (nonatomic, copy) NSString *oriImageScheme;
-
-/// 占位图
-@property (nonatomic, strong) UIImage *placeholderImage;
+/// 自定义图片资源 scheme
+#define XXXCustomImageScheme @"xxxixxxx"
 
 /// html 标签
 @property (nonatomic, copy) NSString *htmlString;
 
-/// 给 img 添加点击事件
-- (void)addImgClickScript;
+/// 是否使用SDWebImage异步加载图片资源 默认不使用，  不开启的情况下不会存在 高度刷新回调
+@property (nonatomic, assign) BOOL isAsyncLoadImg;
 
+///  占位图，仅在 `isAsyncLoadImg` 开启情况下有用
+@property (nonatomic, strong) UIImage *placeholderImage;
 
-///高度刷新回调  会回调多次。如果要求 webView 的高度等于内容高度可根据此高度改变 XXXWebView 高度
+///高度刷新回调  会回调多次，仅在开启 `isAsyncLoadImg` 的情况下有回调
 @property (nonatomic, copy) void(^loadOverHeight)(CGFloat height);
 
+/// 第二次获取高度延迟时间 不建议太小 否则可能获取高度不对 默认 0.4 s
+@property (nonatomic, assign) double delayTime;
 
-/// webView
+/// WKWebView
 @property (nonatomic, strong, readonly) WKWebView *webView;
+
 
 /// 开始加载
 - (void)startLoadHTMLString;
@@ -47,21 +43,15 @@ NS_ASSUME_NONNULL_BEGIN
  - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {}
  */
 
-/// 图片点击
+/// 是否是图片点击，被 a 标签包裹下 无法判断返回 NO
 /// @param navigationAction navigationAction
-+(BOOL)isCustomScheme:(WKNavigationAction *)navigationAction;
+- (BOOL)isCustomScheme:(WKNavigationAction *)navigationAction;
 
 
-/// 是否是 a 标签加载事件
+/// img 标签点击事件，被 a 标签包裹下 无法响应
 /// @param navigationAction navigationAction
-+(BOOL)isA:(WKNavigationAction *)navigationAction;
-
-
-/// img 标签点击事件
-/// @param navigationAction navigationAction
-/// @param oriImageScheme oriImageScheme 同上边属性
-/// @param imgClickBlock imgClickBlock  ｜  isA 是否是 a 标签 ｜ aUrl a 标签的链接  |（imgUrl 图片链接，image 图片 图片加载完成是 image 否则是 imgUrl）
-+(void)customScheme:(WKNavigationAction *)navigationAction oriImageScheme:(NSString *)oriImageScheme imgClick:(void(^)(BOOL isA,NSString *aUrl,NSString *imgUrl,UIImage *image))imgClickBlock;
+/// @param imgClickBlock imgClickBlock   imgUrl 图片链接 |  image 图片
+- (void)customScheme:(WKNavigationAction *)navigationAction imgClick:(void(^)(NSString *imgUrl,  UIImage * _Nullable image))imgClickBlock;
 
 @end
 
@@ -71,23 +61,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 
 
-
-
-
-
-
-
-#pragma mark -
-#pragma mark - WKURLSchemeHandler
-
-@interface XXXCustomSchemeHanlder : NSObject <WKURLSchemeHandler>
-
-@property (nonatomic, copy) NSString *oriImageUrl;
-@property (nonatomic, copy) NSString *oriImageScheme;
-@property (nonatomic, strong) UIImage *placeholderImage;
-@property (nonatomic, copy) void(^updateImageBlock)(void);
-
-@end
 
 #pragma mark -
 #pragma mark - Extension
@@ -107,7 +80,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 
 @interface NSData (xxx)
-- (NSString *)base64EncodedString;
+- (NSString *)xxx_base64EncodedString;
 @end
 
 
