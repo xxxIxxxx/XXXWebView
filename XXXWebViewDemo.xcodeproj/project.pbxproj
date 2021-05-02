@@ -100,19 +100,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		19616B82263BB76300B2C221 /* TFHpple */ = {
-			isa = PBXGroup;
-			children = (
-				19616B86263BB76300B2C221 /* TFHpple.h */,
-				19616B84263BB76300B2C221 /* TFHpple.m */,
-				19616B83263BB76300B2C221 /* TFHppleElement.h */,
-				19616B87263BB76300B2C221 /* TFHppleElement.m */,
-				19616B85263BB76300B2C221 /* XPathQuery.h */,
-				19616B88263BB76300B2C221 /* XPathQuery.m */,
-			);
-			path = TFHpple;
-			sourceTree = "<group>";
-		};
 		199C6DAA256A47BA003EA828 = {
 			isa = PBXGroup;
 			children = (
@@ -175,9 +162,14 @@
 		19ABD5DD257F51E8001C5DCC /* XXXWebView */ = {
 			isa = PBXGroup;
 			children = (
-				19616B82263BB76300B2C221 /* TFHpple */,
 				199C6DEF256A47D0003EA828 /* XXXWebView.h */,
 				199C6DEE256A47D0003EA828 /* XXXWebView.m */,
+				19616B86263BB76300B2C221 /* TFHpple.h */,
+				19616B84263BB76300B2C221 /* TFHpple.m */,
+				19616B83263BB76300B2C221 /* TFHppleElement.h */,
+				19616B87263BB76300B2C221 /* TFHppleElement.m */,
+				19616B85263BB76300B2C221 /* XPathQuery.h */,
+				19616B88263BB76300B2C221 /* XPathQuery.m */,
 			);
 			path = XXXWebView;
 			sourceTree = "<group>";
