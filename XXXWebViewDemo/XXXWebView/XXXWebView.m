@@ -41,46 +41,39 @@
     
     NSString *customSchemeUrl = [NSString stringWithFormat:@"%@",urlSchemeTask.request.URL];
     NSString *oriSchemeUrl = self.imgUrlDict[customSchemeUrl];
-    
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-
-        [self readImageForKey:oriSchemeUrl customSchemeUrl:customSchemeUrl webView:webView];
-    });
+    [self readImageForKey:oriSchemeUrl customSchemeUrl:customSchemeUrl webView:webView];
 }
-
 
 
 - (void)readImageForKey:(NSString *)oriSchemeUrl customSchemeUrl:(NSString *)customSchemeUrl webView:(WKWebView *)webView {
     
     __weak typeof(self) weakSelf = self;
     NSURL *url = [NSURL URLWithString:oriSchemeUrl];
-    [[SDWebImageManager sharedManager] loadImageWithURL:url options:SDWebImageRetryFailed progress:nil completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, SDImageCacheType cacheType, BOOL finished, NSURL * _Nullable imageURL) {
+    [[SDWebImageManager sharedManager] loadImageWithURL:url options:SDWebImageRetryFailed | SDWebImageAvoidDecodeImage progress:nil completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, SDImageCacheType cacheType, BOOL finished, NSURL * _Nullable imageURL) {
         
-        if (image || data) {
-            NSData *imgData = data;
-            
-            if (!imgData) imgData = UIImageJPEGRepresentation(image, 1);
-            
-            [weakSelf callJsUpdateImage:webView imageData:imgData htmlImageUrlStr:customSchemeUrl];
-        }
-        if (error) {}
+        [weakSelf callJsUpdateImage:webView imageData:data image:image htmlImageUrlStr:customSchemeUrl];
+        
     }];
 }
 
-
-
-
-- (void)callJsUpdateImage:(WKWebView *)webView imageData:(NSData *)imageData htmlImageUrlStr:(NSString *)imageUrlString {
+- (void)callJsUpdateImage:(WKWebView *)webView imageData:(NSData *)imageData image:(UIImage *)image htmlImageUrlStr:(NSString *)imageUrlString {
     
-    __weak typeof(self) weakSelf = self;
-    NSString *imageDataStr = [NSString stringWithFormat:@"data:image/png;base64,%@",[imageData xxx_base64EncodedString]];
-    NSString *func = [NSString stringWithFormat:@"xxxUpdateImage('%@','%@')",imageUrlString,imageDataStr];
-
-    [webView evaluateJavaScript:func completionHandler:^(id _Nullable response, NSError * _Nullable error) {
-        if (weakSelf.updateImageBlock) {
-            weakSelf.updateImageBlock();
+    dispatch_async(dispatch_queue_create("xxx.xxxWebView", 0), ^{
+        @autoreleasepool {
+            NSData *imgData = imageData;
+            if (!imgData) imgData = UIImageJPEGRepresentation(image, 1);
+            NSString *imageDataStr = [NSString stringWithFormat:@"data:image/png;base64,%@",[imgData xxx_base64EncodedString]];
+            NSString *func = [NSString stringWithFormat:@"xxxUpdateImage('%@','%@')",imageUrlString,imageDataStr];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                __weak typeof(self) weakSelf = self;
+                [webView evaluateJavaScript:func completionHandler:^(id _Nullable response, NSError * _Nullable error) {
+                    if (weakSelf.updateImageBlock) {
+                        weakSelf.updateImageBlock();
+                    }
+                }];
+            });
         }
-    }];
+    });
 }
 
 - (void)webView:(nonnull WKWebView *)webView stopURLSchemeTask:(nonnull id<WKURLSchemeTask>)urlSchemeTask {
@@ -98,6 +91,9 @@
 @property (nonatomic, copy) NSString *xxxHtmlString;
 @property (nonatomic, strong) NSMutableDictionary<NSString *,NSString *> *imageUrlDict;
 @property (nonatomic, strong) XXXCustomSchemeHanlder *schemeHandler;
+@property (nonatomic, assign) CGFloat lastHeight;
+@property (nonatomic, strong) dispatch_source_t timer;
+@property (nonatomic, strong) UIButton *reloadBtn;
 @end
 
 @implementation XXXWebView
@@ -130,6 +126,17 @@
         _webView = webView;
         [self addSubview:webView];
 
+        UIButton *reloadBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        [_webView addSubview:reloadBtn];
+        [reloadBtn setTitle:@"  内存紧张，点击重新加载  " forState:UIControlStateNormal];
+        reloadBtn.titleLabel.font = [UIFont boldSystemFontOfSize:22];
+        [reloadBtn setTitleColor:UIColor.redColor forState:UIControlStateNormal];
+        reloadBtn.hidden = YES;
+        reloadBtn.layer.cornerRadius = 20;
+        reloadBtn.layer.masksToBounds = YES;
+        reloadBtn.backgroundColor = UIColor.darkGrayColor;
+        [reloadBtn addTarget:weakSelf action:@selector(startLoadHTMLString) forControlEvents:UIControlEventTouchUpInside];
+        self.reloadBtn = reloadBtn;
     }
     return _webView;
 }
@@ -138,6 +145,9 @@
 - (void)layoutSubviews {
     [super layoutSubviews];
     self.webView.frame = CGRectMake(0, 0, self.width, self.height);
+    self.reloadBtn.top = self.height / 2.0 - 40;
+    [self.reloadBtn sizeToFit];
+    self.reloadBtn.center = self.webView.center;
 }
 
 - (void)setHtmlString:(NSString *)htmlString {
@@ -160,6 +170,35 @@
     self.schemeHandler.imgUrlDict = self.imageUrlDict;
     self.schemeHandler.placeholderImage = self.placeholderImage;
     [self.webView loadHTMLString:self.xxxHtmlString baseURL:nil];
+    if (self.reloadBtn.hidden == NO) {
+        [self watchWebView];
+    }
+    self.reloadBtn.hidden = YES;
+    
+}
+
+- (void)watchWebView {
+    
+    if (self.timer) {
+        return;
+    }
+    __weak typeof(self) weakSelf = self;
+    dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+    self.timer = timer;
+    dispatch_source_set_timer(timer, DISPATCH_TIME_NOW, 3.0 * NSEC_PER_SEC, 0 * NSEC_PER_SEC);
+    dispatch_source_set_event_handler(timer, ^{
+        
+        [weakSelf.webView evaluateJavaScript:@"xxxIsActive()" completionHandler:^(id _Nullable rep, NSError * _Nullable error) {
+            if (error.code == 1) {
+                if (weakSelf.timer) {
+                    dispatch_cancel(weakSelf.timer);
+                    weakSelf.reloadBtn.hidden = NO;
+                }
+            }
+        }];
+        
+    });
+    dispatch_resume(timer);
 }
 
 
@@ -220,7 +259,7 @@
     
     NSString *scriptLab1 = @"</script>";
     
-    NSString *jsFunctionString = @"function xxxUpdateImage(url, imgData) {for (let item of allImgElmentList) {if (item.src == url) {item.src = imgData;break;}}};";
+    NSString *jsFunctionString = @"function xxxUpdateImage(url, imgData) {for (let item of allImgElmentList) {if (item.src == url) {item.src = imgData;break;}}}; function xxxIsActive() { return true};";
     
     if ([self.xxxHtmlString containsString:scriptLab1]) {
      
@@ -259,9 +298,14 @@
     if (!compledBlock) {
         return;
     }
+    __weak typeof(self) weakSelf = self;
     [self.webView evaluateJavaScript:@"document.body.children[0].offsetHeight" completionHandler:^(id _Nullable result,NSError * _Nullable error) {
         // 高度会有一点少  ，手动补上一些 margin
         CGFloat height = [result floatValue] + 20.0;
+        if (weakSelf.lastHeight == height) {
+            return;
+        }
+        weakSelf.lastHeight = height;
         compledBlock(height);
     }];
 }
@@ -327,6 +371,12 @@
             }
         }
         imgClickBlock(imgUrl,image);
+    }
+}
+
+- (void)dealloc {
+    if (self.timer) {
+        dispatch_cancel(self.timer);
     }
 }
 

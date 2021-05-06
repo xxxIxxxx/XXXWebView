@@ -41,6 +41,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// @param compledBlock 高度回调
 - (void)getWebViewContentHeight:(void(^)(CGFloat height))compledBlock;
 
+
+- (void)watchWebView;
+
 //MARK: 以下方法只能在 navigationDelegate 代理中使用
 /*
  - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {}

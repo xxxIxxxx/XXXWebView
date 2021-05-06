@@ -111,10 +111,21 @@
         decisionHandler(WKNavigationActionPolicyCancel);
         return;
     }
-  
     decisionHandler(WKNavigationActionPolicyAllow);
-  
 }
+
+- (void)webView:(WKWebView *)webView didFinishNavigation:(null_unspecified WKNavigation *)navigation {
+    [self.xWebView watchWebView];
+}
+
+- (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {
+    NSLog(@"========  webView 白屏  ==========");
+    // webView 发生白屏时
+    // 不建议直接 startLoadHTMLString 加载，可添加按钮 让用户自己点击加载。
+    // 如果当前有大量的 webView 已被创建时，直接重加载会造成卡死。
+//    [self.xWebView startLoadHTMLString];
+}
+
 
 
 - (void)cpbtnClick{
