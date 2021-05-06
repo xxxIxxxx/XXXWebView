@@ -42,8 +42,6 @@
     NSString *customSchemeUrl = [NSString stringWithFormat:@"%@",urlSchemeTask.request.URL];
     NSString *oriSchemeUrl = self.imgUrlDict[customSchemeUrl];
     
-  
-  
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 
         [self readImageForKey:oriSchemeUrl customSchemeUrl:customSchemeUrl webView:webView];
@@ -181,9 +179,17 @@
 
 - (void)addHtmlLab {
     
-    if (![self.xxxHtmlString containsString:@"</html>"]) {
-        self.xxxHtmlString = [NSString stringWithFormat:@"<html><head><meta charset=\"utf-8\"><meta content='width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,minimum-scale=1.0'name='viewport'><style>div {margin-left: 10px;margin-right:10px;}img{width:%fpx;height: auto;}</style></head><body><div>%@</div></body></html>",UIScreen.mainScreen.bounds.size.width - 50,self.xxxHtmlString];
+    if (![self.xxxHtmlString containsString:@"<body>"]) {
+        self.xxxHtmlString = [NSString stringWithFormat:@"<body><div>%@</div></body>",self.xxxHtmlString];
+    }else{
+        self.xxxHtmlString = [self.xxxHtmlString stringByReplacingOccurrencesOfString:@"<body>" withString:[NSString stringWithFormat:@"<body> <div>"]];
+        self.xxxHtmlString = [self.xxxHtmlString stringByReplacingOccurrencesOfString:@"</body>" withString:[NSString stringWithFormat:@"<div> </body>"]];
     }
+    
+    if (![self.xxxHtmlString containsString:@"<html>"]) {
+        self.xxxHtmlString = [NSString stringWithFormat:@"<html><head><meta charset=\"utf-8\" content='width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,minimum-scale=1.0'name='viewport'><style>img{width: 100%%;height: auto;}</style></head>%@</html>",self.xxxHtmlString];
+    }
+    
 }
 
 - (void)addGetAllImgScript {
@@ -248,18 +254,27 @@
     }
 }
 
+
+- (void)getWebViewContentHeight:(void(^)(CGFloat height))compledBlock {
+    if (!compledBlock) {
+        return;
+    }
+    [self.webView evaluateJavaScript:@"document.body.children[0].offsetHeight" completionHandler:^(id _Nullable result,NSError * _Nullable error) {
+        // 高度会有一点少  ，手动补上一些 margin
+        CGFloat height = [result floatValue] + 20.0;
+        compledBlock(height);
+    }];
+}
+
+
 - (void)updateHeight {
     [self nowUpdateHeight];
     [self delayUpdateHeight];
 }
 
 - (void)nowUpdateHeight {
-    
     __weak typeof(self) weakSelf = self;
-    [self.webView evaluateJavaScript:@"document.body.offsetHeight" completionHandler:^(id _Nullable result,NSError * _Nullable error) {
-        
-        // 高度会有一点少 ，手动补上一些
-        CGFloat height = [result floatValue] + 10.0;
+    [self getWebViewContentHeight:^(CGFloat height) {
         if (weakSelf.loadOverHeight) {
             weakSelf.loadOverHeight(height);
         }
@@ -267,7 +282,6 @@
 }
 
 - (void)delayUpdateHeight {
-    
     __weak typeof(self) weakSelf = self;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, self.delayTime * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         [weakSelf nowUpdateHeight];
@@ -445,3 +459,4 @@ static const char base64EncodingTable[64]
 
 
 @end
+

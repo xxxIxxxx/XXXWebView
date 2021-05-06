@@ -91,6 +91,7 @@
     xWebView.loadOverHeight = ^(CGFloat height) {
         weakHeaderView.height = height +10;
         weakTabView.tableHeaderView = weakHeaderView;
+        NSLog(@"h ----------- %f",height);
     };
 }
 
@@ -137,10 +138,6 @@
 
 
 - (NSString *)htmlString {
-    
-//    <a href=\"https://www.baidu.com\">\
-//      <img src=\"https://wx2.sinaimg.cn/large/006CHHsBly1gkxrs7785ej31402eoe84.jpg\" />\
-//    </a>\
     
     return @"<div>\
     一、《望天门山》 作者：唐代李白 1、原文 天门中断楚江开，碧水东流至此回。两岸青山相对出，孤帆一bai片日边来。 2、译文\
