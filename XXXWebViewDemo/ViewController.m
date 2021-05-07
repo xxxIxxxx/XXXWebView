@@ -81,17 +81,21 @@
     xWebView.placeholderImage = [UIImage imageNamed:@"abc"];
     xWebView.webView.navigationDelegate = self;
     xWebView.webView.scrollView.scrollEnabled = NO;
-    xWebView.isAsyncLoadImg = YES;
+    xWebView.asyncLoadImageEnable = YES;
+    xWebView.isShowReloadBtn = YES;
     xWebView.htmlString = [self htmlString];
     [xWebView startLoadHTMLString];
     
     __weak typeof(headerView) weakHeaderView = headerView;
     __weak typeof(tabView) weakTabView = tabView;
     
+    xWebView.checkEmptyBlock = ^(BOOL isEmpty) {
+        NSLog(@"---- 是否白屏   %d",isEmpty);
+    };
+    
     xWebView.loadOverHeight = ^(CGFloat height) {
         weakHeaderView.height = height +10;
         weakTabView.tableHeaderView = weakHeaderView;
-        NSLog(@"h ----------- %f",height);
     };
 }
 
@@ -114,16 +118,8 @@
     decisionHandler(WKNavigationActionPolicyAllow);
 }
 
-- (void)webView:(WKWebView *)webView didFinishNavigation:(null_unspecified WKNavigation *)navigation {
-    [self.xWebView watchWebView];
-}
-
 - (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {
     NSLog(@"========  webView 白屏  ==========");
-    // webView 发生白屏时
-    // 不建议直接 startLoadHTMLString 加载，可添加按钮 让用户自己点击加载。
-    // 如果当前有大量的 webView 已被创建时，直接重加载会造成卡死。
-//    [self.xWebView startLoadHTMLString];
 }
 
 

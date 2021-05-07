@@ -153,7 +153,7 @@
 - (void)setHtmlString:(NSString *)htmlString {
     _htmlString = htmlString;
     self.xxxHtmlString = htmlString;
-    if (self.isAsyncLoadImg) {
+    if (self.asyncLoadImageEnable) {
         [self changeImageScheme];
     }
     [self addHtmlLab];
@@ -170,11 +170,19 @@
     self.schemeHandler.imgUrlDict = self.imageUrlDict;
     self.schemeHandler.placeholderImage = self.placeholderImage;
     [self.webView loadHTMLString:self.xxxHtmlString baseURL:nil];
-    if (self.reloadBtn.hidden == NO) {
+    
+    if (self.isShowReloadBtn || self.checkEmptyBlock) {
         [self watchWebView];
     }
     self.reloadBtn.hidden = YES;
     
+}
+
+- (void)setCheckEmptyBlock:(void (^)(BOOL))checkEmptyBlock {
+    _checkEmptyBlock = checkEmptyBlock;
+    if (checkEmptyBlock) {
+        [self watchWebView];
+    }
 }
 
 - (void)watchWebView {
@@ -183,20 +191,30 @@
         return;
     }
     __weak typeof(self) weakSelf = self;
-    dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_get_main_queue());
+    dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_queue_create("xxx.WebView.12", 0));
     self.timer = timer;
-    dispatch_source_set_timer(timer, DISPATCH_TIME_NOW, 3.0 * NSEC_PER_SEC, 0 * NSEC_PER_SEC);
+    dispatch_source_set_timer(timer, DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC, 0 * NSEC_PER_SEC);
     dispatch_source_set_event_handler(timer, ^{
-        
-        [weakSelf.webView evaluateJavaScript:@"xxxIsActive()" completionHandler:^(id _Nullable rep, NSError * _Nullable error) {
-            if (error.code == 1) {
-                if (weakSelf.timer) {
-                    dispatch_cancel(weakSelf.timer);
-                    weakSelf.reloadBtn.hidden = NO;
+        dispatch_async(dispatch_get_main_queue(), ^{
+
+            [weakSelf.webView evaluateJavaScript:@"xxxIsActive()" completionHandler:^(id _Nullable rep, NSError * _Nullable error) {
+                BOOL isEmpty = NO;
+                if (error.code == 1) {
+                    if (weakSelf.timer) {
+                        dispatch_cancel(weakSelf.timer);
+                        weakSelf.timer = nil;
+                    }
+                    isEmpty = YES;
                 }
-            }
-        }];
-        
+                if (weakSelf.isShowReloadBtn) {
+                    weakSelf.reloadBtn.hidden = !isEmpty;
+                }
+                if (weakSelf.checkEmptyBlock) {
+                    weakSelf.checkEmptyBlock(isEmpty);
+                }
+                
+            }];
+        });
     });
     dispatch_resume(timer);
 }
@@ -294,8 +312,8 @@
 }
 
 
-- (void)getWebViewContentHeight:(void(^)(CGFloat height))compledBlock {
-    if (!compledBlock) {
+- (void)getWebViewContentHeight:(void(^)(CGFloat height))completion {
+    if (!completion) {
         return;
     }
     __weak typeof(self) weakSelf = self;
@@ -306,7 +324,7 @@
             return;
         }
         weakSelf.lastHeight = height;
-        compledBlock(height);
+        completion(height);
     }];
 }
 
@@ -357,7 +375,7 @@
         UIImage *image;
       for (NSURLQueryItem *item in urlComponents.queryItems) {
           if ([item.name isEqualToString:@"imgSrc"]) {
-              if (self.isAsyncLoadImg && ![item.value containsString:XXXCustomImageScheme]) {
+              if (self.asyncLoadImageEnable && ![item.value containsString:XXXCustomImageScheme]) {
                   NSString *base64String = [item.value stringByReplacingOccurrencesOfString:@"data:image/png;base64," withString:@""];
                   NSData *imgData = [[NSData alloc] initWithBase64EncodedString:base64String options:NSDataBase64DecodingIgnoreUnknownCharacters];
                   image = [UIImage imageWithData:imgData];

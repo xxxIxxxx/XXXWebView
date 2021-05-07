@@ -19,16 +19,22 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, copy) NSString *htmlString;
 
 /// 是否使用SDWebImage异步加载图片资源 默认不使用，  不开启的情况下不会存在 高度刷新回调
-@property (nonatomic, assign) BOOL isAsyncLoadImg;
+@property (nonatomic, assign) BOOL asyncLoadImageEnable;
 
-/// 占位图，仅在 `isAsyncLoadImg` 开启情况下有用
+/// 占位图，仅在 `asyncLoadImageEnable` 开启情况下有用
 @property (nonatomic, strong) UIImage *placeholderImage;
 
-/// 高度刷新回调  会回调多次，仅在开启 `isAsyncLoadImg` 的情况下有回调
+/// 高度刷新回调  会回调多次，仅在开启 `asyncLoadImageEnable` 的情况下有回调
 @property (nonatomic, copy) void(^loadOverHeight)(CGFloat height);
 
 /// 第二次获取高度延迟时间 不建议太小 否则可能获取高度不对 默认 0.4 s
 @property (nonatomic, assign) double delayTime;
+
+/// 发生白屏时 是否展示重新加载按钮 默认 NO 不展示
+@property (nonatomic, assign) BOOL isShowReloadBtn;
+
+/// 白屏检测回调，isEmpty = NO 不是白屏 会回调多次， isEmpty = YES 是白屏
+@property (nonatomic, copy) void(^checkEmptyBlock)(BOOL isEmpty);
 
 /// WKWebView
 @property (nonatomic, strong, readonly) WKWebView *webView;
@@ -38,11 +44,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)startLoadHTMLString;
 
 /// 获取内容高度
-/// @param compledBlock 高度回调
-- (void)getWebViewContentHeight:(void(^)(CGFloat height))compledBlock;
+/// @param completion 高度回调
+- (void)getWebViewContentHeight:(void(^)(CGFloat height))completion;
 
 
-- (void)watchWebView;
 
 //MARK: 以下方法只能在 navigationDelegate 代理中使用
 /*
