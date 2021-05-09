@@ -15,12 +15,17 @@ self.xWebView = xWebView;
 xWebView.placeholderImage = [UIImage imageNamed:@"abc"];
 xWebView.webView.navigationDelegate = self;
 xWebView.webView.scrollView.scrollEnabled = NO;
-xWebView.isAsyncLoadImg = YES;
+xWebView.asyncLoadImageEnable = YES;
+xWebView.isShowReloadBtn = YES;
 xWebView.htmlString = [self htmlString];
 [xWebView startLoadHTMLString];
 
 __weak typeof(headerView) weakHeaderView = headerView;
 __weak typeof(tabView) weakTabView = tabView;
+
+xWebView.checkEmptyBlock = ^(BOOL isEmpty) {
+    NSLog(@"---- 是否白屏   %d",isEmpty);
+};
 
 xWebView.loadOverHeight = ^(CGFloat height) {
     weakHeaderView.height = height +10;
@@ -31,7 +36,6 @@ xWebView.loadOverHeight = ^(CGFloat height) {
 # 实现 webView.navigationDelegate 代理，拦截点击事件
 ```
 //代理 xWebView.webView.navigationDelegate = self;
-
 - (void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler {
     
   
@@ -43,9 +47,7 @@ xWebView.loadOverHeight = ^(CGFloat height) {
         decisionHandler(WKNavigationActionPolicyCancel);
         return;
     }
-  
     decisionHandler(WKNavigationActionPolicyAllow);
-  
 }
 
 ```
