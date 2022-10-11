@@ -7,7 +7,6 @@
 //
 
 #import "XXXWebView.h"
-// https://github.com/topfunky/hpple/tree/master
 #import "TFHpple.h"
 #import <SDWebImage/SDWebImage.h>
 
@@ -129,8 +128,8 @@
         UIButton *reloadBtn = [UIButton buttonWithType:UIButtonTypeCustom];
         [_webView addSubview:reloadBtn];
         [reloadBtn setTitle:@"  内存紧张，点击重新加载  " forState:UIControlStateNormal];
-        reloadBtn.titleLabel.font = [UIFont boldSystemFontOfSize:22];
-        [reloadBtn setTitleColor:UIColor.redColor forState:UIControlStateNormal];
+        reloadBtn.titleLabel.font = [UIFont boldSystemFontOfSize:16];
+        [reloadBtn setTitleColor:UIColor.whiteColor forState:UIControlStateNormal];
         reloadBtn.hidden = YES;
         reloadBtn.layer.cornerRadius = 20;
         reloadBtn.layer.masksToBounds = YES;
@@ -146,7 +145,8 @@
     [super layoutSubviews];
     self.webView.frame = CGRectMake(0, 0, self.width, self.height);
     self.reloadBtn.top = self.height / 2.0 - 40;
-    [self.reloadBtn sizeToFit];
+    self.reloadBtn.width = kScreenWidth - 100;
+    self.reloadBtn.height = 40.0;
     self.reloadBtn.center = self.webView.center;
 }
 
@@ -172,7 +172,7 @@
     [self.webView loadHTMLString:self.xxxHtmlString baseURL:nil];
     
     if (self.isShowReloadBtn || self.checkEmptyBlock) {
-        [self watchWebView];
+        [self dealyWatch];
     }
     self.reloadBtn.hidden = YES;
     
@@ -181,9 +181,17 @@
 - (void)setCheckEmptyBlock:(void (^)(BOOL))checkEmptyBlock {
     _checkEmptyBlock = checkEmptyBlock;
     if (checkEmptyBlock) {
-        [self watchWebView];
+        [self dealyWatch];
     }
 }
+
+
+- (void)dealyWatch {
+  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    [self watchWebView];
+  });
+}
+
 
 - (void)watchWebView {
     
@@ -199,11 +207,12 @@
 
             [weakSelf.webView evaluateJavaScript:@"xxxIsActive()" completionHandler:^(id _Nullable rep, NSError * _Nullable error) {
                 BOOL isEmpty = NO;
-                if (error.code == 1) {
+                if (rep == nil) {
                     if (weakSelf.timer) {
                         dispatch_cancel(weakSelf.timer);
                         weakSelf.timer = nil;
                     }
+                    weakSelf.loadOverHeight(300);
                     isEmpty = YES;
                 }
                 if (weakSelf.isShowReloadBtn) {
@@ -228,9 +237,11 @@
     for (TFHppleElement * element in list) {
         NSString *oriImageUrl = element.attributes[@"src"];
         NSString *oriImageUrlScheme = [NSURL URLWithString:oriImageUrl].scheme;
+      if (oriImageUrlScheme) {
         NSString *newImageUrl = [oriImageUrl stringByReplacingOccurrencesOfString:oriImageUrlScheme withString:XXXCustomImageScheme];
         self.xxxHtmlString = [self.xxxHtmlString stringByReplacingOccurrencesOfString:oriImageUrl withString:newImageUrl];
         self.imageUrlDict[newImageUrl] = oriImageUrl;
+      }
     }
 }
 
@@ -277,7 +288,7 @@
     
     NSString *scriptLab1 = @"</script>";
     
-    NSString *jsFunctionString = @"function xxxUpdateImage(url, imgData) {for (let item of allImgElmentList) {if (item.src == url) {item.src = imgData;break;}}}; function xxxIsActive() { return true};";
+    NSString *jsFunctionString = @"function xxxUpdateImage(url, imgData) {for (let item of allImgElmentList) {if (item.src == url) {item.src = imgData;break;}}}; function xxxIsActive() { return \"isActive\"};";
     
     if ([self.xxxHtmlString containsString:scriptLab1]) {
      
